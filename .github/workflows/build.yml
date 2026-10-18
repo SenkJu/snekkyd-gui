@@ -1,80 +1,82 @@
 name: snekkyd-gui
 
-on: [push]
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
 
 jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v7
         with:
           submodules: true
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v7
         with:
-          node-version: 14
-      - uses: krdlab/setup-haxe@v1
+          node-version: '24'
+          cache: npm
+      - uses: krdlab/setup-haxe@v2
         with:
-          haxe-version: 4.2.0
+          haxe-version: '4.3.7'
       - name: Build snekkyd
         run: |
           cd snekkyd
-          haxelib install hxcpp --quiet
           haxe build-js.hxml
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           copy .\js\snekkyd.js ..\public\lib\
       - name: Build snekkyp
         run: |
           cd snekkyp
-          haxelib install hxcpp --quiet
           haxe build-js.hxml
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           copy .\js\snekkyp.js ..\public\lib\
       - name: Install NPM dependencies
-        run: npm install
+        run: npm ci
       - name: Build Svelte
         run: npm run build
       - name: Package artifact
-        run: | 
-          cd tools/build/windows
-          .\build.bat
+        shell: cmd
+        working-directory: tools/build/windows
+        run: build.bat
       - name: Upload artifact
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v7
         with:
           name: snekkyd-gui-win
           path: "tools/build/windows/Snekky Decompiler.exe"
+          if-no-files-found: error
   linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v7
         with:
           submodules: true
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v7
         with:
-          node-version: 14
-      - uses: krdlab/setup-haxe@v1
+          node-version: '24'
+          cache: npm
+      - uses: krdlab/setup-haxe@v2
         with:
-          haxe-version: 4.2.0
+          haxe-version: '4.3.7'
       - name: Build snekkyd
         run: |
           cd snekkyd
-          haxelib install hxcpp --quiet
           haxe build-js.hxml
-          cp js/snekkyd.js ../public/lib\
+          cp js/snekkyd.js ../public/lib/
       - name: Build snekkyp
         run: |
           cd snekkyp
-          haxelib install hxcpp --quiet
           haxe build-js.hxml
-          cp js/snekkyp.js ../public/lib\
+          cp js/snekkyp.js ../public/lib/
       - name: Install NPM dependencies
-        run: npm install
+        run: npm ci
       - name: Build Svelte
         run: npm run build
       - name: Package artifact
-        run: | 
-          cd tools/build/linux
-          chmod +x build.sh
-          ./build.sh
+        run: bash tools/build/linux/build.sh
       - name: Upload artifact
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v7
         with:
           name: snekkyd-gui-linux
           path: "tools/build/linux/Snekky_Decompiler-x86_64.AppImage"
+          if-no-files-found: error
